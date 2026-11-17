@@ -1,0 +1,23 @@
+# 1. HTTP Status Code Distribution (Web Server Health & Error Monitoring)
+index=buttercup_games sourcetype=access_combined_wcookie
+| stats count by status
+| sort - count
+
+# 2. Top Selling Products & Revenue (CSV Lookup Enrichment)
+index=buttercup_games sourcetype=access_combined_wcookie action=purchase status=200
+| lookup Prices_lookup productId OUTPUT product_name price
+| stats count as units_sold, sum(price) as total_revenue by product_name
+| eval total_revenue="$" . tostring(round(total_revenue, 2), "commas")
+| sort - units_sold
+
+# 3. Hourly Web Traffic by Server (Regex Extraction & Token Filtering)
+index=buttercup_games sourcetype=access_combined_wcookie
+| rex field=source "(?<web_server>www\d+)"
+| search web_server="$Server_token$"
+| timechart span=1h count by web_server
+
+# 4. Failed SSH Logins by Source IP (Brute-Force Threat Detection)
+index=buttercup_games source="*secure.log" "Failed password"
+| rex "from (?<src_ip>\d+\.\d+\.\d+\.\d+)"
+| stats count as failed_attempts by src_ip, host
+| sort - failed_attempts

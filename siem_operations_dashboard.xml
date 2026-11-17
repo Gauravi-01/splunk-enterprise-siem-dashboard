@@ -1,0 +1,96 @@
+<form version="1.1" theme="light">
+  <label>Buttercup Games - Operations &amp; Security Overview</label>
+  <fieldset submitButton="false">
+    <input type="dropdown" token="Server_token">
+      <label>Select Web Server</label>
+      <choice value="*">All</choice>
+      <choice value="www1">www1</choice>
+      <choice value="www2">www2</choice>
+      <choice value="www3">www3</choice>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>HTTP Status Code Distribution</title>
+      <chart>
+        <search>
+          <query>index=buttercup_games sourcetype=access_combined_wcookie
+| stats count by status
+| sort - count</query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">all</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Top Selling Products &amp; Revenue</title>
+      <table>
+        <search>
+          <query>index=buttercup_games sourcetype=access_combined_wcookie action=purchase status=200
+| lookup Prices_lookup productId OUTPUT product_name price
+| stats count as units_sold, sum(price) as total_revenue by product_name
+| eval total_revenue="$$" . tostring(round(total_revenue, 2), "commas")
+| sort - units_sold</query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">highlow</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Hourly Web Traffic by Server</title>
+      <chart>
+        <search>
+          <query>index=buttercup_games sourcetype=access_combined_wcookie
+| rex field=source "(?&lt;web_server&gt;www\d+)"
+| search web_server="$Server_token$"
+| timechart span=1h count by web_server</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>Failed SSH Logins by Source IP</title>
+      <table>
+        <search>
+          <query>index=buttercup_games source="*secure.log" "Failed password"
+| rex "from (?&lt;src_ip&gt;\d+\.\d+\.\d+\.\d+)"
+| stats count as failed_attempts by src_ip, host
+| sort - failed_attempts</query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="failed_attempts">
+          <colorPalette type="minMidMax" maxColor="#D41F1F" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>
